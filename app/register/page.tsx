@@ -47,7 +47,7 @@ function page() {
     return (
         <div className='relative flex h-screen w-[100%]'>
             <div className='absolute h-screen w-[100%]'>
-                <Image src='/backimage.jpg' alt='' className='w-full h-full object-cover' height={1000} width={1000} />
+                <Image src='/backgoundImage.avif' alt='' className='w-full h-full object-cover' height={1000} width={1000} />
             </div>
             <div className='absolute h-full w-full flex items-center justify-center'>
                 <div className='bg-gray-200 text-black px-10 py-10 rounded-xl w-[28%] h-fit'>
