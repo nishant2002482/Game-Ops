@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/form"
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
     email: z.string().email({
@@ -29,7 +30,8 @@ const formSchema = z.object({
     }),
 })
 function page() {
-
+    const [errorMessage, setErrorMessage] = useState<string | null>(null); // State variable to store error message
+    const router = useRouter()
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -37,21 +39,31 @@ function page() {
             password: "",
         },
     })
+    useEffect(() => {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const uid = user.uid;
+                router.push('/')
+            } else {
+                router.push('/login')
+            }
+        });
+    })
 
     // Define a submit handler.
     function onSubmit(values: z.infer<typeof formSchema>) {
-        createUserWithEmailAndPassword(auth, values.email, values.password)
+        signInWithEmailAndPassword(auth, values.email, values.password)
             .then((userCredential) => {
-                // Signed up 
                 const user = userCredential.user;
-                // ...
+                router.push('/');
             })
             .catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                // ..
+                const errorMessage = error.message; // Get error message from Firebase
+                setErrorMessage(errorMessage); // Set error message to state variable
             });
+
     }
+
     return (
         <div className='relative flex h-screen w-[100%]'>
             <div className='absolute h-screen w-[100%]'>
@@ -60,6 +72,9 @@ function page() {
             <div className='absolute h-full w-full flex items-center justify-center'>
                 <div className='bg-secondary text-black px-10 py-10 rounded-xl w-[28%] h-fit'>
                     <div className='font-bold text-center text-2xl'>Login</div>
+                    {errorMessage && ( // Render error message if it exists
+                        <div className="text-red-500 text-sm mb-2 text-center">Invalid Username or Password</div>
+                    )}
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-2 mt-6">
                             <FormField
@@ -71,9 +86,6 @@ function page() {
                                         <FormControl>
                                             <Input placeholder="Enter your email" {...field} />
                                         </FormControl>
-                                        {/* <FormDescription>
-                                            Please enter your email address.
-                                        </FormDescription> */}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -87,9 +99,6 @@ function page() {
                                         <FormControl>
                                             <Input placeholder="Enter your password" type="password" {...field} />
                                         </FormControl>
-                                        {/* <FormDescription>
-                                            Please enter your password.
-                                        </FormDescription> */}
                                         <FormMessage />
                                     </FormItem>
                                 )}

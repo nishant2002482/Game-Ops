@@ -17,18 +17,25 @@ import {
 } from "@/components/ui/form"
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { useRouter } from 'next/navigation'
 
 const formSchema = z.object({
-    username: z.string(),
+    username: z.string().nonempty({
+        message: "Username is required.", // Custom error message for username
+    }),
     email: z.string().email({
         message: "Invalid email address.",
     }),
     password: z.string().min(6, {
         message: "Password must be at least 6 characters.",
     }),
-})
-function page() {
+});
 
+function page() {
+    const router = useRouter();
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -39,11 +46,35 @@ function page() {
     })
 
     // Define a submit handler.
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        // Do something with the form values.
-        // This will be type-safe and validated.
-        console.log(values.email)
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        try {
+            console.log('we are in onSubmit')
+            createUserWithEmailAndPassword(auth, values.email, values.password)
+                .then((userCredential) => {
+                    // Signed up 
+                    const user = userCredential.user;
+                    // ...
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    // ..
+                });
+
+            await setDoc(doc(db, "users", values.username), {
+                username: values.username,
+                email: values.email,
+                createtedAt: new Date()
+            });
+            router.push('/login');
+            console.log(values);
+        } catch (error) {
+            console.error("Error adding document: ", error);
+        }
     }
+
+
+
     return (
         <div className='relative flex h-screen w-[100%]'>
             <div className='absolute h-screen w-[100%]'>
@@ -63,10 +94,9 @@ function page() {
                                         <FormControl>
                                             <Input placeholder="Enter your username" {...field} />
                                         </FormControl>
-                                        {/* <FormDescription>
-                                            Please enter your email address.
-                                        </FormDescription> */}
-                                        <FormMessage />
+                                        {form.formState.errors.username && (
+                                            <FormMessage>{form.formState.errors.username.message}</FormMessage>
+                                        )}
                                     </FormItem>
                                 )}
                             />
